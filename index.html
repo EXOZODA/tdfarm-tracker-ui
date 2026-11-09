@@ -1,0 +1,1897 @@
+<!DOCTYPE html>
+<html lang="ru" class="dark">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>TDFARM · FunPay Трекер Доходов · EXOZODA</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        tailwind.config = {
+            darkMode: 'class',
+            theme: {
+                extend: {
+                    fontFamily: {
+                        sans: ['Inter', '-apple-system', 'BlinkMacSystemFont', 'sans-serif'],
+                        mono: ['JetBrains Mono', 'monospace'],
+                    },
+                    colors: {
+                        canvas: '#07070a',
+                        sidebar: '#0b0b10',
+                        surface: '#111118',
+                        'surface-hover': '#171721',
+                        card: '#0f0f15',
+                        border: '#1e1e2a',
+                        'border-light': '#2a2a3a',
+                        muted: '#71717a',
+                        secondary: '#a1a1aa',
+                    }
+                }
+            }
+        }
+    </script>
+    <script src="https://unpkg.com/lucide@latest"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
+    <style>
+        body {
+            background-color: #07070a;
+            color: #f4f4f5;
+            font-feature-settings: "cv02", "cv03", "cv04", "cv11", "tnum";
+            -webkit-font-smoothing: antialiased;
+        }
+        ::-webkit-scrollbar { width: 6px; height: 6px; }
+        ::-webkit-scrollbar-track { background: transparent; }
+        ::-webkit-scrollbar-thumb { background: #232330; border-radius: 3px; }
+        ::-webkit-scrollbar-thumb:hover { background: #36364a; }
+
+        .tab-pane { display: none; }
+        .tab-pane.active { display: block; animation: fadeIn 0.16s cubic-bezier(0.16, 1, 0.3, 1); }
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(4px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        .glass-card {
+            background: linear-gradient(180deg, rgba(20, 20, 29, 0.85) 0%, rgba(14, 14, 20, 0.92) 100%);
+            border: 1px solid rgba(255, 255, 255, 0.07);
+            box-shadow: 0 4px 20px -2px rgba(0, 0, 0, 0.5), inset 0 1px 0 0 rgba(255, 255, 255, 0.04);
+            border-radius: 12px;
+            transition: border-color 0.15s ease, transform 0.15s ease;
+        }
+        .glass-card:hover {
+            border-color: rgba(255, 255, 255, 0.13);
+        }
+
+        .kpi-emerald {
+            background: radial-gradient(120% 100% at 100% 0%, rgba(16, 185, 129, 0.11) 0%, rgba(15, 15, 21, 0.95) 70%);
+            border: 1px solid rgba(16, 185, 129, 0.25);
+        }
+        .kpi-blue {
+            background: radial-gradient(120% 100% at 100% 0%, rgba(59, 130, 246, 0.10) 0%, rgba(15, 15, 21, 0.95) 70%);
+            border: 1px solid rgba(59, 130, 246, 0.22);
+        }
+        .kpi-amber {
+            background: radial-gradient(120% 100% at 100% 0%, rgba(245, 158, 11, 0.10) 0%, rgba(15, 15, 21, 0.95) 70%);
+            border: 1px solid rgba(245, 158, 11, 0.22);
+        }
+        .kpi-purple {
+            background: radial-gradient(120% 100% at 100% 0%, rgba(168, 85, 247, 0.10) 0%, rgba(15, 15, 21, 0.95) 70%);
+            border: 1px solid rgba(168, 85, 247, 0.22);
+        }
+
+        .nav-active {
+            background: rgba(255, 255, 255, 0.08);
+            color: #ffffff !important;
+            border-color: rgba(255, 255, 255, 0.12);
+            box-shadow: inset 2px 0 0 0 #10b981;
+        }
+        .chart-btn-active {
+            background-color: #272736 !important;
+            color: #ffffff !important;
+            border-color: #3f3f56 !important;
+        }
+    </style>
+</head>
+<body class="h-screen flex flex-col lg:flex-row bg-canvas text-sm font-sans antialiased overflow-hidden">
+
+    <!-- SIDEBAR NAVIGATION (Desktop) -->
+    <aside class="w-full lg:w-[248px] flex-shrink-0 bg-sidebar border-b lg:border-b-0 lg:border-r border-border flex flex-col justify-between z-30">
+        <div>
+            <!-- Brand Header -->
+            <div class="h-16 px-5 flex items-center justify-between border-b border-border">
+                <div class="flex items-center gap-3">
+                    <div class="w-8 h-8 rounded-lg bg-emerald-500/15 border border-emerald-500/30 flex items-center justify-center text-emerald-400 font-mono font-bold text-sm shadow-inner">
+                        TD
+                    </div>
+                    <div>
+                        <div class="flex items-center gap-2">
+                            <span class="font-bold text-sm tracking-tight text-white">TDFARM</span>
+                            <span class="text-[10px] font-mono px-1.5 py-0.5 rounded bg-emerald-500/10 text-emerald-400 border border-emerald-500/20">LIVE</span>
+                        </div>
+                        <div class="text-[11px] text-muted font-mono">FunPay Income Tracker</div>
+                    </div>
+                </div>
+                <!-- Mobile Sync Button -->
+                <button onclick="triggerSync()" class="lg:hidden px-2.5 py-1.5 rounded-lg bg-surface border border-border text-xs font-medium text-zinc-200 flex items-center gap-1.5">
+                    <i data-lucide="refresh-cw" class="w-3.5 h-3.5"></i>
+                    <span id="mobileBalBadge">— ₽</span>
+                </button>
+            </div>
+
+            <!-- Navigation Links -->
+            <nav class="p-3 flex lg:flex-col gap-1 overflow-x-auto lg:overflow-x-visible">
+                <button onclick="switchTab('overview')" class="nav-item nav-active flex items-center justify-between px-3 py-2.5 rounded-lg text-xs font-medium text-secondary hover:text-white hover:bg-surface/60 transition-all whitespace-nowrap" data-tab="overview">
+                    <div class="flex items-center gap-2.5">
+                        <i data-lucide="layout-dashboard" class="w-4 h-4"></i>
+                        <span>Дашборд доходов</span>
+                    </div>
+                </button>
+
+                <button onclick="switchTab('orders')" class="nav-item flex items-center justify-between px-3 py-2.5 rounded-lg text-xs font-medium text-secondary hover:text-white hover:bg-surface/60 transition-all whitespace-nowrap" data-tab="orders">
+                    <div class="flex items-center gap-2.5">
+                        <i data-lucide="shopping-bag" class="w-4 h-4"></i>
+                        <span>Продажи и чеки</span>
+                    </div>
+                    <span id="navBadgeOrders" class="hidden lg:inline-block text-[10px] font-mono px-1.5 py-0.5 rounded bg-surface border border-border text-zinc-300">111</span>
+                </button>
+
+                <button onclick="switchTab('warehouse')" class="nav-item flex items-center justify-between px-3 py-2.5 rounded-lg text-xs font-medium text-secondary hover:text-white hover:bg-surface/60 transition-all whitespace-nowrap" data-tab="warehouse">
+                    <div class="flex items-center gap-2.5">
+                        <i data-lucide="layers" class="w-4 h-4"></i>
+                        <span>Лоты и склад</span>
+                    </div>
+                    <span id="navBadgeStock" class="hidden lg:inline-block text-[10px] font-mono px-1.5 py-0.5 rounded bg-emerald-500/10 border border-emerald-500/20 text-emerald-400">379 шт</span>
+                </button>
+
+                <button onclick="switchTab('finance')" class="nav-item flex items-center justify-between px-3 py-2.5 rounded-lg text-xs font-medium text-secondary hover:text-white hover:bg-surface/60 transition-all whitespace-nowrap" data-tab="finance">
+                    <div class="flex items-center gap-2.5">
+                        <i data-lucide="wallet" class="w-4 h-4"></i>
+                        <span>PnL и Расходы</span>
+                    </div>
+                </button>
+
+                <button onclick="switchTab('chats')" class="nav-item flex items-center justify-between px-3 py-2.5 rounded-lg text-xs font-medium text-secondary hover:text-white hover:bg-surface/60 transition-all whitespace-nowrap" data-tab="chats">
+                    <div class="flex items-center gap-2.5">
+                        <i data-lucide="message-square" class="w-4 h-4"></i>
+                        <span>Клиенты и Чаты</span>
+                    </div>
+                    <span id="navBadgeChats" class="hidden lg:inline-block text-[10px] font-mono px-1.5 py-0.5 rounded bg-surface border border-border text-zinc-400">50</span>
+                </button>
+            </nav>
+        </div>
+
+        <!-- Sidebar Footer (Desktop) -->
+        <div class="hidden lg:block p-3.5 border-t border-border space-y-3">
+            <!-- Farm Status Widget -->
+            <div class="p-3 rounded-xl bg-surface/80 border border-border space-y-2">
+                <div class="flex items-center justify-between text-[11px]">
+                    <span class="text-zinc-300 font-medium">Нода SystemX (192.168.0.22)</span>
+                    <span class="flex items-center gap-1 text-emerald-400 font-mono text-[10px]">
+                        <span class="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse"></span>
+                        24/7
+                    </span>
+                </div>
+                <div class="space-y-1 text-[11px] font-mono text-muted">
+                    <div class="flex justify-between"><span>Синхронизация:</span><span class="text-zinc-300">Каждые 5 мин</span></div>
+                    <div class="flex justify-between"><span>След. пуш:</span><span class="text-emerald-400" id="sideTimer">05:00</span></div>
+                    <div class="flex justify-between"><span>Обновлено:</span><span class="text-zinc-400" id="sideScrapedAt">—</span></div>
+                </div>
+            </div>
+
+            <!-- Seller Profile Link -->
+            <a href="https://funpay.com/users/13600649/" target="_blank" class="flex items-center justify-between p-2 rounded-lg hover:bg-surface border border-transparent hover:border-border transition-all group">
+                <div class="flex items-center gap-2.5 min-w-0">
+                    <div class="w-7 h-7 rounded-md bg-zinc-800 border border-zinc-700 flex items-center justify-center font-mono font-bold text-xs text-white">
+                        E
+                    </div>
+                    <div class="min-w-0">
+                        <div class="text-xs font-semibold text-zinc-100 truncate" id="sideUserName">EXOZODA</div>
+                        <div class="text-[10px] font-mono text-muted">FunPay #13600649</div>
+                    </div>
+                </div>
+                <i data-lucide="external-link" class="w-3.5 h-3.5 text-muted group-hover:text-zinc-200 transition-colors"></i>
+            </a>
+        </div>
+    </aside>
+
+    <!-- MAIN CONTENT AREA -->
+    <div class="flex-1 flex flex-col min-w-0 h-full overflow-hidden">
+
+        <!-- TOP HEADER BAR -->
+        <header class="h-16 border-b border-border bg-canvas/90 backdrop-blur px-4 lg:px-8 flex items-center justify-between flex-shrink-0 z-20">
+            <div class="flex items-center gap-3">
+                <h1 id="pageHeaderTitle" class="text-base lg:text-lg font-semibold text-white tracking-tight">Дашборд доходов</h1>
+                <span id="headerScrapedBadge" class="hidden sm:inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full bg-surface border border-border text-[11px] font-mono text-muted">
+                    <span class="w-1.5 h-1.5 rounded-full bg-emerald-400"></span>
+                    <span id="topScrapedTime">Актуальные данные</span>
+                </span>
+            </div>
+
+            <div class="flex items-center gap-2.5">
+                <!-- Quick Search -->
+                <div class="hidden md:flex items-center relative">
+                    <i data-lucide="search" class="w-3.5 h-3.5 text-muted absolute left-3"></i>
+                    <input id="globalQuickSearch" oninput="handleQuickSearch(this.value)" type="text" placeholder="Поиск заказа или покупателя..." class="w-56 pl-8 pr-3 py-1.5 rounded-lg bg-surface border border-border text-xs text-zinc-100 placeholder-muted focus:outline-none focus:border-zinc-500 transition-colors">
+                </div>
+
+                <!-- Live Balance Pill -->
+                <a href="https://funpay.com/account/balance" target="_blank" class="hidden sm:flex items-center gap-2 px-3 py-1.5 rounded-lg bg-emerald-500/10 border border-emerald-500/25 hover:border-emerald-500/40 transition-colors">
+                    <span class="text-xs text-emerald-200/80">Баланс:</span>
+                    <span id="topBalanceValue" class="font-mono font-bold text-xs text-emerald-400">192.50 ₽</span>
+                </a>
+
+                <!-- Sync Action Button -->
+                <button id="btnSync" onclick="triggerSync()" class="inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-lg text-xs font-semibold bg-white text-zinc-950 hover:bg-zinc-200 active:scale-95 transition-all shadow-sm">
+                    <i data-lucide="refresh-cw" id="syncIcon" class="w-3.5 h-3.5"></i>
+                    <span>Обновить</span>
+                </button>
+            </div>
+        </header>
+
+        <!-- SCROLLABLE WORKSPACE -->
+        <main class="flex-1 overflow-y-auto p-4 lg:p-8 space-y-6">
+
+            <!-- ========================================================= -->
+            <!-- TAB 1: ДАШБОРД ДОХОДОВ (OVERVIEW)                         -->
+            <!-- ========================================================= -->
+            <div id="tab-overview" class="tab-pane active space-y-6">
+
+                <!-- 4 TOP KPI CARDS -->
+                <div class="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-4">
+                    <!-- KPI 1: Доступный баланс FunPay -->
+                    <div class="glass-card kpi-emerald p-5 flex flex-col justify-between">
+                        <div class="flex items-center justify-between">
+                            <span class="text-xs font-medium text-emerald-200/90">Баланс на FunPay</span>
+                            <div class="w-8 h-8 rounded-lg bg-emerald-500/15 border border-emerald-500/25 flex items-center justify-center text-emerald-400">
+                                <i data-lucide="wallet" class="w-4 h-4"></i>
+                            </div>
+                        </div>
+                        <div class="my-3">
+                            <div class="text-3xl font-mono font-bold text-white tracking-tight" id="kpiBalance">192.50 ₽</div>
+                            <div class="flex items-center gap-2 mt-1.5 text-[11px] font-mono">
+                                <span class="text-emerald-400 font-medium">Доступно к выводу</span>
+                                <span class="text-zinc-600">•</span>
+                                <span class="text-amber-300/90" id="kpiPendingPaid">+30.73 ₽ в ожидании</span>
+                            </div>
+                        </div>
+                        <div class="pt-3 border-t border-white/10 flex items-center justify-between text-[11px] font-mono text-zinc-300">
+                            <span id="kpiPaidOrdersBadge">12 зак. ждут подтв.</span>
+                            <a href="https://funpay.com/account/balance" target="_blank" class="text-emerald-400 hover:underline flex items-center gap-1">
+                                <span>Вывести</span>
+                                <i data-lucide="arrow-up-right" class="w-3 h-3"></i>
+                            </a>
+                        </div>
+                    </div>
+
+                    <!-- KPI 2: Выручка (Оборот без возвратов) -->
+                    <div class="glass-card kpi-blue p-5 flex flex-col justify-between">
+                        <div class="flex items-center justify-between">
+                            <span class="text-xs font-medium text-blue-200/90">Чистая выручка (Оборот)</span>
+                            <div class="w-8 h-8 rounded-lg bg-blue-500/15 border border-blue-500/25 flex items-center justify-center text-blue-400">
+                                <i data-lucide="trending-up" class="w-4 h-4"></i>
+                            </div>
+                        </div>
+                        <div class="my-3">
+                            <div class="text-3xl font-mono font-bold text-white tracking-tight" id="kpiNetTurnover">281.56 ₽</div>
+                            <div class="flex items-center gap-2 mt-1.5 text-[11px] font-mono">
+                                <span class="text-zinc-400">Валовый: <strong class="text-zinc-200" id="kpiGrossTurnover">292.38 ₽</strong></span>
+                                <span class="text-zinc-600">•</span>
+                                <span class="text-emerald-400" id="kpiRoiBadge">ROI 196.5%</span>
+                            </div>
+                        </div>
+                        <div class="pt-3 border-t border-white/10 flex items-center justify-between text-[11px] font-mono text-zinc-400">
+                            <span>Закрыто: <strong class="text-zinc-200" id="kpiClosedSum">250.83 ₽</strong></span>
+                            <span>Возвраты: <strong class="text-rose-400" id="kpiRefundSum">10.82 ₽</strong></span>
+                        </div>
+                    </div>
+
+                    <!-- KPI 3: Доход за сегодня -->
+                    <div class="glass-card kpi-amber p-5 flex flex-col justify-between">
+                        <div class="flex items-center justify-between">
+                            <span class="text-xs font-medium text-amber-200/90">Доход за сегодня</span>
+                            <div class="w-8 h-8 rounded-lg bg-amber-500/15 border border-amber-500/25 flex items-center justify-center text-amber-400">
+                                <i data-lucide="zap" class="w-4 h-4"></i>
+                            </div>
+                        </div>
+                        <div class="my-3">
+                            <div class="flex items-baseline gap-2.5">
+                                <div class="text-3xl font-mono font-bold text-white tracking-tight" id="kpiTodayRev">57.00 ₽</div>
+                                <span id="kpiTodayDelta" class="text-[11px] font-mono px-1.5 py-0.5 rounded bg-emerald-500/15 text-emerald-400 border border-emerald-500/30">+14% ко вчера</span>
+                            </div>
+                            <div class="flex items-center gap-2 mt-1.5 text-[11px] font-mono text-zinc-300">
+                                <span id="kpiTodayOrders">15 заказов</span>
+                                <span class="text-zinc-600">•</span>
+                                <span id="kpiTodayUnits">48 шт. отгружено</span>
+                            </div>
+                        </div>
+                        <div class="pt-3 border-t border-white/10 flex items-center justify-between text-[11px] font-mono text-zinc-400">
+                            <span>Вчера (8 ноя):</span>
+                            <strong class="text-zinc-200" id="kpiYesterdaySummary">50.00 ₽ (13 зак.)</strong>
+                        </div>
+                    </div>
+
+                    <!-- KPI 4: Отгружено штук & Склад -->
+                    <div class="glass-card kpi-purple p-5 flex flex-col justify-between">
+                        <div class="flex items-center justify-between">
+                            <span class="text-xs font-medium text-purple-200/90">Продано и Складской запас</span>
+                            <div class="w-8 h-8 rounded-lg bg-purple-500/15 border border-purple-500/25 flex items-center justify-center text-purple-400">
+                                <i data-lucide="package-check" class="w-4 h-4"></i>
+                            </div>
+                        </div>
+                        <div class="my-3">
+                            <div class="flex items-baseline gap-2">
+                                <div class="text-3xl font-mono font-bold text-white tracking-tight" id="kpiTotalUnits">243 шт.</div>
+                                <span class="text-xs font-mono text-zinc-400" id="kpiTotalOrdersCount">(111 чеков)</span>
+                            </div>
+                            <div class="flex items-center gap-2 mt-1.5 text-[11px] font-mono text-zinc-300">
+                                <span>Ср. чек: <strong class="text-white" id="kpiAvgOrder">2.63 ₽</strong></span>
+                                <span class="text-zinc-600">•</span>
+                                <span>Покупателей: <strong class="text-white" id="kpiUniqueBuyers">89</strong></span>
+                            </div>
+                        </div>
+                        <div class="pt-3 border-t border-white/10 flex items-center justify-between text-[11px] font-mono text-zinc-400">
+                            <span>В наличии на витрине:</span>
+                            <strong class="text-emerald-400" id="kpiStockValue">379 шт. (~760 ₽)</strong>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- MAIN CHART: ДИНАМИКА ДОХОДОВ ПО ДНЯМ -->
+                <div class="glass-card p-5 lg:p-6 space-y-4">
+                    <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-border pb-4">
+                        <div>
+                            <div class="flex items-center gap-2.5">
+                                <h2 class="text-base font-semibold text-white">Динамика доходов и продаж по дням</h2>
+                                <span class="text-[11px] font-mono px-2 py-0.5 rounded bg-surface border border-border text-zinc-300" id="chartDateRangeBadge">29 окт – 9 ноя</span>
+                            </div>
+                            <p class="text-xs text-muted mt-0.5">Реальная статистика по каждому дню с разбивкой по направлениям (Roblox 18+, Hunt: Showdown 1896, Rust Drops)</p>
+                        </div>
+
+                        <!-- Chart Mode Switcher -->
+                        <div class="flex items-center gap-1.5 bg-surface p-1 rounded-lg border border-border self-start">
+                            <button onclick="setMainChartMode('stacked')" id="btnChartStacked" class="chart-mode-btn chart-btn-active px-2.5 py-1 rounded-md text-xs font-medium text-zinc-300 transition-colors">
+                                По дням (₽)
+                            </button>
+                            <button onclick="setMainChartMode('cumulative')" id="btnChartCumulative" class="chart-mode-btn px-2.5 py-1 rounded-md text-xs font-medium text-muted hover:text-zinc-200 transition-colors">
+                                Кумулятивный Рост vs Затраты
+                            </button>
+                            <button onclick="setMainChartMode('volume')" id="btnChartVolume" class="chart-mode-btn px-2.5 py-1 rounded-md text-xs font-medium text-muted hover:text-zinc-200 transition-colors">
+                                Заказы и штуки
+                            </button>
+                        </div>
+                    </div>
+
+                    <div class="relative h-72 lg:h-80 w-full">
+                        <canvas id="mainRevenueChart"></canvas>
+                    </div>
+                </div>
+
+                <!-- 3 GAME DIRECTION CARDS (ROBLOX / RUST / HUNT) -->
+                <div class="grid grid-cols-1 lg:grid-cols-3 gap-4" id="gameCardsContainer">
+                    <!-- Populated dynamically by JS -->
+                </div>
+
+                <!-- BOTTOM SPLIT: RECENT ORDERS (LEFT) & DONUT + VIP BUYERS (RIGHT) -->
+                <div class="grid grid-cols-1 xl:grid-cols-12 gap-6">
+                    <!-- Recent Orders Table (7 cols) -->
+                    <div class="xl:col-span-7 glass-card overflow-hidden flex flex-col">
+                        <div class="p-4 lg:p-5 border-b border-border flex items-center justify-between">
+                            <div>
+                                <h3 class="text-sm font-semibold text-white">Последние продажи на FunPay</h3>
+                                <p class="text-xs text-muted mt-0.5">Свежие чеки автовыдачи в реальном времени</p>
+                            </div>
+                            <button onclick="switchTab('orders')" class="px-3 py-1.5 rounded-lg bg-surface hover:bg-surface-hover border border-border text-xs font-medium text-zinc-200 flex items-center gap-1.5 transition-colors">
+                                <span>Все заказы</span>
+                                <i data-lucide="arrow-right" class="w-3.5 h-3.5"></i>
+                            </button>
+                        </div>
+                        <div class="overflow-x-auto flex-1">
+                            <table class="w-full text-left text-xs">
+                                <thead class="bg-surface/60 text-muted border-b border-border text-[10px] font-mono uppercase">
+                                    <tr>
+                                        <th class="py-2.5 px-4">Чек / Дата</th>
+                                        <th class="py-2.5 px-3">Покупатель</th>
+                                        <th class="py-2.5 px-3">Направление</th>
+                                        <th class="py-2.5 px-3 text-center">Кол-во</th>
+                                        <th class="py-2.5 px-3">Статус</th>
+                                        <th class="py-2.5 px-4 text-right">Сумма</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="recentOrdersBody" class="divide-y divide-border/60 text-zinc-200">
+                                    <!-- Injected by JS -->
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+
+                    <!-- Right Column: Revenue Share Donut + Top Buyers (5 cols) -->
+                    <div class="xl:col-span-5 flex flex-col gap-6">
+                        <!-- Donut Comparison -->
+                        <div class="glass-card p-5 space-y-4">
+                            <div class="flex items-center justify-between border-b border-border pb-3">
+                                <span class="text-sm font-semibold text-white">Доля направлений в выручке</span>
+                                <span class="text-xs font-mono text-emerald-400 font-semibold" id="donutTotalLabel">292.38 ₽</span>
+                            </div>
+                            <div class="grid grid-cols-1 sm:grid-cols-2 gap-4 items-center">
+                                <div class="relative h-44 w-full flex items-center justify-center">
+                                    <canvas id="revenueDonutChart"></canvas>
+                                </div>
+                                <div class="space-y-3 font-mono text-xs" id="donutLegendList">
+                                    <!-- Injected by JS -->
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Top VIP Buyers -->
+                        <div class="glass-card p-5 space-y-3 flex-1">
+                            <div class="flex items-center justify-between border-b border-border pb-3">
+                                <div>
+                                    <span class="text-sm font-semibold text-white">Топ покупателей</span>
+                                    <p class="text-[11px] text-muted">Оптовики и постоянные клиенты</p>
+                                </div>
+                                <button onclick="switchTab('chats')" class="text-xs text-emerald-400 hover:underline font-mono">Все клиенты →</button>
+                            </div>
+                            <div id="topBuyersMiniList" class="space-y-2">
+                                <!-- Injected by JS -->
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- ========================================================= -->
+            <!-- TAB 2: ПРОДАЖИ И ЧЕКИ (ALL ORDERS)                        -->
+            <!-- ========================================================= -->
+            <div id="tab-orders" class="tab-pane space-y-5">
+                <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+                    <div>
+                        <h2 class="text-base font-semibold text-white">Полный реестр заказов FunPay</h2>
+                        <p class="text-xs text-muted mt-0.5">Все исторические и текущие продажи с фильтрацией по играм и статусам</p>
+                    </div>
+                    <button onclick="exportOrdersCSV()" class="inline-flex items-center gap-2 px-3.5 py-2 rounded-lg bg-surface hover:bg-surface-hover border border-border text-xs font-medium text-zinc-100 transition-colors self-start">
+                        <i data-lucide="download" class="w-3.5 h-3.5 text-emerald-400"></i>
+                        <span>Скачать CSV</span>
+                    </button>
+                </div>
+
+                <!-- Filter Bar -->
+                <div class="glass-card p-4 flex flex-wrap items-center gap-3">
+                    <div class="flex items-center gap-1.5 bg-surface p-1 rounded-lg border border-border">
+                        <button onclick="setOrderGameFilter('all')" data-game="all" class="order-game-btn chart-btn-active px-3 py-1.5 rounded-md text-xs font-medium text-zinc-200 transition-colors">Все игры</button>
+                        <button onclick="setOrderGameFilter('Roblox')" data-game="Roblox" class="order-game-btn px-3 py-1.5 rounded-md text-xs font-medium text-muted hover:text-zinc-200 transition-colors">🧱 Roblox 18+</button>
+                        <button onclick="setOrderGameFilter('Rust')" data-game="Rust" class="order-game-btn px-3 py-1.5 rounded-md text-xs font-medium text-muted hover:text-zinc-200 transition-colors">🦀 Rust Drops</button>
+                        <button onclick="setOrderGameFilter('Hunt')" data-game="Hunt" class="order-game-btn px-3 py-1.5 rounded-md text-xs font-medium text-muted hover:text-zinc-200 transition-colors">🎯 Hunt 1896</button>
+                    </div>
+
+                    <select id="orderStatusSelect" onchange="applyOrdersFilter()" class="px-3 py-2 rounded-lg bg-surface border border-border text-xs text-zinc-200 focus:outline-none">
+                        <option value="all">Любой статус</option>
+                        <option value="Закрыт">✅ Закрыт (Подтвержден)</option>
+                        <option value="Оплачен">⏳ Оплачен (Ждет подтверждения)</option>
+                        <option value="Возврат">🔄 Возврат</option>
+                    </select>
+
+                    <div class="relative flex-1 min-w-[220px]">
+                        <i data-lucide="search" class="w-3.5 h-3.5 text-muted absolute left-3 top-2.5"></i>
+                        <input id="orderSearchInput" oninput="applyOrdersFilter()" type="text" placeholder="Поиск по #ID заказа, нику покупателя или названию лота..." class="w-full pl-8 pr-3 py-2 rounded-lg bg-surface border border-border text-xs text-zinc-100 placeholder-muted focus:outline-none focus:border-zinc-500">
+                    </div>
+                </div>
+
+                <!-- Filtered Summary Strip -->
+                <div class="grid grid-cols-2 sm:grid-cols-4 gap-3">
+                    <div class="glass-card p-3.5">
+                        <div class="text-[11px] text-muted">Найдено заказов</div>
+                        <div class="text-xl font-mono font-bold text-white mt-0.5" id="fltOrdersCount">111</div>
+                    </div>
+                    <div class="glass-card p-3.5">
+                        <div class="text-[11px] text-muted">Отгружено аккаунтов</div>
+                        <div class="text-xl font-mono font-bold text-blue-400 mt-0.5" id="fltUnitsCount">243 шт.</div>
+                    </div>
+                    <div class="glass-card p-3.5">
+                        <div class="text-[11px] text-muted">Сумма по выборке</div>
+                        <div class="text-xl font-mono font-bold text-emerald-400 mt-0.5" id="fltRevenueSum">292.38 ₽</div>
+                    </div>
+                    <div class="glass-card p-3.5">
+                        <div class="text-[11px] text-muted">Средний чек</div>
+                        <div class="text-xl font-mono font-bold text-zinc-200 mt-0.5" id="fltAvgCheck">2.63 ₽</div>
+                    </div>
+                </div>
+
+                <!-- Full Orders Table -->
+                <div class="glass-card overflow-hidden">
+                    <div class="overflow-x-auto">
+                        <table class="w-full text-left text-xs">
+                            <thead class="bg-surface/80 text-muted border-b border-border text-[10px] font-mono uppercase tracking-wider">
+                                <tr>
+                                    <th class="py-3 px-4">ID чека</th>
+                                    <th class="py-3 px-3">Дата и время</th>
+                                    <th class="py-3 px-3">Покупатель</th>
+                                    <th class="py-3 px-3">Игра</th>
+                                    <th class="py-3 px-3">Описание лота</th>
+                                    <th class="py-3 px-3 text-center">Штук</th>
+                                    <th class="py-3 px-3">Статус</th>
+                                    <th class="py-3 px-4 text-right">Сумма</th>
+                                </tr>
+                            </thead>
+                            <tbody id="allOrdersTableBody" class="divide-y divide-border/60 text-zinc-200">
+                                <!-- Injected by JS -->
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+
+            <!-- ========================================================= -->
+            <!-- TAB 3: ЛОТЫ И СКЛАД (WAREHOUSE & LOTS)                    -->
+            <!-- ========================================================= -->
+            <div id="tab-warehouse" class="tab-pane space-y-6">
+                <div>
+                    <h2 class="text-base font-semibold text-white">Витрина лотов FunPay и Складские пулы</h2>
+                    <p class="text-xs text-muted mt-0.5">Статус активных офферов с автовыдачей ⚡ и остатки готовых аккаунтов в SQLite</p>
+                </div>
+
+                <!-- Warehouse Pool Cards -->
+                <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+                    <div class="glass-card p-5 space-y-3 border-l-2 border-l-blue-500">
+                        <div class="flex items-center justify-between">
+                            <span class="text-xs font-semibold text-blue-400 uppercase font-mono">Склад Roblox 18+ (No 2SV)</span>
+                            <span class="text-[11px] font-mono px-2 py-0.5 rounded bg-blue-500/10 text-blue-400 border border-blue-500/20">Infinix LTE Автофарм</span>
+                        </div>
+                        <div class="text-3xl font-mono font-bold text-white" id="whRobloxTotal">135 шт.</div>
+                        <div class="space-y-1.5 pt-2 border-t border-border text-xs font-mono">
+                            <div class="flex justify-between text-zinc-300"><span>Лот 1 (Поштучно 1.00 ₽):</span><span class="text-white font-semibold" id="whRobloxRetail">35 шт.</span></div>
+                            <div class="flex justify-between text-zinc-300"><span>Лот 2 (Опт Пак 100 шт.):</span><span class="text-emerald-400 font-semibold" id="whRobloxPack">100 шт. (1 пак)</span></div>
+                            <div class="flex justify-between text-muted"><span>Уже продано:</span><span id="whRobloxSold">128 шт.</span></div>
+                        </div>
+                        <div class="pt-2 flex gap-2">
+                            <a href="https://funpay.com/lots/offer?id=81540601" target="_blank" class="flex-1 py-1.5 text-center rounded-lg bg-surface hover:bg-surface-hover border border-border text-xs font-medium text-zinc-200 transition-colors">Лот Розница ↗</a>
+                            <a href="https://funpay.com/lots/offer?id=81601503" target="_blank" class="flex-1 py-1.5 text-center rounded-lg bg-surface hover:bg-surface-hover border border-border text-xs font-medium text-zinc-200 transition-colors">Лот Пак 100 ↗</a>
+                        </div>
+                    </div>
+
+                    <div class="glass-card p-5 space-y-3 border-l-2 border-l-rose-500">
+                        <div class="flex items-center justify-between">
+                            <span class="text-xs font-semibold text-rose-400 uppercase font-mono">Склад Hunt: Showdown 1896</span>
+                            <span class="text-[11px] font-mono px-2 py-0.5 rounded bg-rose-500/10 text-rose-400 border border-rose-500/20">3 Боевых Лота ⚡</span>
+                        </div>
+                        <div class="text-3xl font-mono font-bold text-white" id="whHuntTotal">88 шт.</div>
+                        <div class="space-y-1.5 pt-2 border-t border-border text-xs font-mono">
+                            <div class="flex justify-between text-zinc-300"><span>Лот 3 (Легендарный Охотник 4.20 ₽):</span><span class="text-emerald-400 font-semibold">50 шт.</span></div>
+                            <div class="flex justify-between text-zinc-300"><span>Лот 1 (Комбо Нед. 1+2 10.00 ₽):</span><span class="text-white font-semibold">20 шт.</span></div>
+                            <div class="flex justify-between text-zinc-300"><span>Лот 2 (Неделя 2 3.30 ₽):</span><span class="text-white font-semibold">18 шт.</span></div>
+                        </div>
+                        <div class="pt-2 flex gap-2">
+                            <a href="https://funpay.com/lots/offer?id=81702628" target="_blank" class="flex-1 py-1.5 text-center rounded-lg bg-surface hover:bg-surface-hover border border-border text-xs font-medium text-zinc-200 transition-colors">Лот 3 (Топ-1) ↗</a>
+                            <a href="https://funpay.com/lots/offer?id=80977446" target="_blank" class="flex-1 py-1.5 text-center rounded-lg bg-surface hover:bg-surface-hover border border-border text-xs font-medium text-zinc-200 transition-colors">Лот 1 Комбо ↗</a>
+                        </div>
+                    </div>
+
+                    <div class="glass-card p-5 space-y-3 border-l-2 border-l-amber-500">
+                        <div class="flex items-center justify-between">
+                            <span class="text-xs font-semibold text-amber-400 uppercase font-mono">Склад Rust Twitch Drops</span>
+                            <span class="text-[11px] font-mono px-2 py-0.5 rounded bg-amber-500/10 text-amber-400 border border-amber-500/20">Раунд 54 (5/5)</span>
+                        </div>
+                        <div class="text-3xl font-mono font-bold text-white" id="whRustTotal">156 шт.</div>
+                        <div class="space-y-1.5 pt-2 border-t border-border text-xs font-mono">
+                            <div class="flex justify-between text-zinc-300"><span>Аккаунтов с 5/5 дропсами:</span><span class="text-white font-semibold" id="whRustAccs">156 шт.</span></div>
+                            <div class="flex justify-between text-zinc-300"><span>Предметов в БД:</span><span class="text-amber-400 font-semibold" id="whRustDrops">990 шт.</span></div>
+                            <div class="flex justify-between text-muted"><span>Уже продано:</span><span id="whRustSold">102 шт.</span></div>
+                        </div>
+                        <div class="pt-2 flex">
+                            <a href="https://funpay.com/lots/offer?id=80715385" target="_blank" class="w-full py-1.5 text-center rounded-lg bg-surface hover:bg-surface-hover border border-border text-xs font-medium text-zinc-200 transition-colors">Открыть лот Rust #80715385 ↗</a>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Lots Performance Table -->
+                <div class="glass-card overflow-hidden">
+                    <div class="p-4 lg:p-5 border-b border-border flex items-center justify-between">
+                        <div>
+                            <h3 class="text-sm font-semibold text-white">Эффективность продаваемых лотов</h3>
+                            <p class="text-xs text-muted mt-0.5">Фактическая выручка, количество проданных единиц и средний чек по каждому лоту</p>
+                        </div>
+                    </div>
+                    <div class="overflow-x-auto">
+                        <table class="w-full text-left text-xs">
+                            <thead class="bg-surface/80 text-muted border-b border-border text-[10px] font-mono uppercase">
+                                <tr>
+                                    <th class="py-3 px-4">Направление</th>
+                                    <th class="py-3 px-3">Лот на FunPay</th>
+                                    <th class="py-3 px-3 text-right">Продано шт.</th>
+                                    <th class="py-3 px-3 text-right">Чеков</th>
+                                    <th class="py-3 px-3 text-right">Ср. цена / шт</th>
+                                    <th class="py-3 px-3 text-right">Выручка</th>
+                                    <th class="py-3 px-4 text-right">Остаток в пуле</th>
+                                </tr>
+                            </thead>
+                            <tbody id="catalogueTableBody" class="divide-y divide-border/60 text-zinc-200">
+                                <!-- Injected by JS -->
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+
+            <!-- ========================================================= -->
+            <!-- TAB 4: PnL И РАСХОДЫ (FINANCE, PURCHASES & BALANCE LOG)   -->
+            <!-- ========================================================= -->
+            <div id="tab-finance" class="tab-pane space-y-6">
+                <div>
+                    <h2 class="text-base font-semibold text-white">Юнит-экономика, PnL и История баланса</h2>
+                    <p class="text-xs text-muted mt-0.5">Сверка доходов от продаж с затратами на закупку пустышек Twitch и движением средств</p>
+                </div>
+
+                <!-- 4 Financial Summary Cards -->
+                <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+                    <div class="glass-card p-4">
+                        <div class="text-xs text-muted">Выручка (без возвратов)</div>
+                        <div class="text-2xl font-mono font-bold text-white mt-1.5" id="finNetRevenue">281.56 ₽</div>
+                        <div class="text-[11px] text-emerald-400 font-mono mt-1">107 успешных сделок</div>
+                    </div>
+                    <div class="glass-card p-4">
+                        <div class="text-xs text-muted">Затраты на Twitch-сырье (Toxaaww)</div>
+                        <div class="text-2xl font-mono font-bold text-amber-400 mt-1.5" id="finTwitchSpent">143.27 ₽</div>
+                        <div class="text-[11px] text-muted font-mono mt-1">Пул под Rust + Hunt</div>
+                    </div>
+                    <div class="glass-card p-4">
+                        <div class="text-xs text-muted">Себестоимость Roblox 18+</div>
+                        <div class="text-2xl font-mono font-bold text-emerald-400 mt-1.5">0.00 ₽</div>
+                        <div class="text-[11px] text-muted font-mono mt-1">Собственная ферма (100% маржа)</div>
+                    </div>
+                    <div class="glass-card p-4">
+                        <div class="text-xs text-muted">Чистый денежный профит + Склад</div>
+                        <div class="text-2xl font-mono font-bold text-emerald-400 mt-1.5" id="finOperatingProfit">+138.29 ₽</div>
+                        <div class="text-[11px] text-zinc-300 font-mono mt-1" id="finAssetSub">+ 760.40 ₽ в готовом товаре</div>
+                    </div>
+                </div>
+
+                <div class="grid grid-cols-1 xl:grid-cols-12 gap-6">
+                    <!-- Balance History from /account/balance (5 cols) -->
+                    <div class="xl:col-span-5 glass-card overflow-hidden flex flex-col">
+                        <div class="p-4 border-b border-border flex items-center justify-between">
+                            <div>
+                                <h3 class="text-sm font-semibold text-white">Последние начисления на баланс</h3>
+                                <p class="text-[11px] text-muted">Прямая выписка со страницы /account/balance</p>
+                            </div>
+                            <span class="text-xs font-mono font-bold text-emerald-400" id="finLiveBalBadge">192.50 ₽</span>
+                        </div>
+                        <div id="balanceHistoryContainer" class="divide-y divide-border/60 max-h-[520px] overflow-y-auto font-mono text-xs">
+                            <!-- Injected by JS -->
+                        </div>
+                    </div>
+
+                    <!-- Sourcing Purchases Table (7 cols) -->
+                    <div class="xl:col-span-7 glass-card overflow-hidden flex flex-col">
+                        <div class="p-4 border-b border-border flex items-center justify-between">
+                            <div>
+                                <h3 class="text-sm font-semibold text-white">История закупок сырья и расходников</h3>
+                                <p class="text-[11px] text-muted">Реальные покупки аккаунтов на FunPay (funpay_purchases.json)</p>
+                            </div>
+                            <span class="text-xs font-mono font-bold text-amber-400" id="finPurchasesTotalBadge">143.27 ₽ (сырье)</span>
+                        </div>
+                        <div class="overflow-x-auto max-h-[520px] overflow-y-auto">
+                            <table class="w-full text-left text-xs font-mono">
+                                <thead class="bg-surface/80 text-muted border-b border-border text-[10px] uppercase sticky top-0">
+                                    <tr>
+                                        <th class="py-2.5 px-4">Ордер</th>
+                                        <th class="py-2.5 px-3">Описание закупки</th>
+                                        <th class="py-2.5 px-3">Продавец</th>
+                                        <th class="py-2.5 px-3">Дата</th>
+                                        <th class="py-2.5 px-4 text-right">Сумма</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="purchasesTableBody" class="divide-y divide-border/60 text-zinc-200">
+                                    <!-- Injected by JS -->
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- ========================================================= -->
+            <!-- TAB 5: КЛИЕНТЫ И ЧАТЫ (CUSTOMERS & MESSENGER)             -->
+            <!-- ========================================================= -->
+            <div id="tab-chats" class="tab-pane space-y-6">
+                <!-- Top Buyers Table -->
+                <div class="glass-card overflow-hidden">
+                    <div class="p-4 border-b border-border flex items-center justify-between">
+                        <div>
+                            <h3 class="text-sm font-semibold text-white">Рейтинг покупателей по выручке (VIP-клиенты)</h3>
+                            <p class="text-[11px] text-muted">Клиенты, принесшие наибольший доход и купившие больше всего аккаунтов</p>
+                        </div>
+                    </div>
+                    <div class="overflow-x-auto">
+                        <table class="w-full text-left text-xs">
+                            <thead class="bg-surface/80 text-muted border-b border-border text-[10px] font-mono uppercase">
+                                <tr>
+                                    <th class="py-2.5 px-4">Место</th>
+                                    <th class="py-2.5 px-3">Покупатель</th>
+                                    <th class="py-2.5 px-3">Направления</th>
+                                    <th class="py-2.5 px-3 text-center">Заказов</th>
+                                    <th class="py-2.5 px-3 text-center">Куплено шт.</th>
+                                    <th class="py-2.5 px-3">Последний заказ</th>
+                                    <th class="py-2.5 px-4 text-right">Принес выручки</th>
+                                </tr>
+                            </thead>
+                            <tbody id="vipBuyersTableBody" class="divide-y divide-border/60 text-zinc-200">
+                                <!-- Injected by JS -->
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+
+                <!-- Messenger Split View -->
+                <div class="glass-card overflow-hidden flex flex-col md:flex-row h-[640px]">
+                    <!-- Contacts List -->
+                    <div class="w-full md:w-80 border-b md:border-b-0 md:border-r border-border flex flex-col bg-sidebar">
+                        <div class="p-3 border-b border-border">
+                            <div class="relative">
+                                <i data-lucide="search" class="w-3.5 h-3.5 text-muted absolute left-3 top-2.5"></i>
+                                <input id="chatSearchInput" oninput="filterChats()" type="text" placeholder="Поиск диалога с клиентом..." class="w-full pl-8 pr-3 py-1.5 rounded-lg bg-surface border border-border text-xs text-zinc-100 placeholder-muted focus:outline-none focus:border-zinc-500">
+                            </div>
+                        </div>
+                        <div id="contactsContainer" class="flex-1 overflow-y-auto divide-y divide-border/60">
+                            <div class="p-4 text-center text-xs text-muted font-mono">Загрузка диалогов...</div>
+                        </div>
+                    </div>
+
+                    <!-- Chat Messages Timeline -->
+                    <div class="flex-1 flex flex-col bg-canvas">
+                        <div class="p-3.5 border-b border-border flex items-center justify-between bg-surface/40">
+                            <div class="flex items-center gap-2.5">
+                                <div id="activeChatAvatar" class="h-8 w-8 rounded-lg bg-zinc-800 border border-zinc-700 flex items-center justify-center text-xs font-mono font-bold text-white">
+                                    U
+                                </div>
+                                <div>
+                                    <div class="flex items-center gap-2">
+                                        <span class="text-xs font-semibold text-white" id="activeChatUser">Выберите диалог</span>
+                                        <span class="text-[10px] font-mono px-1.5 py-0.5 rounded bg-surface border border-border text-muted" id="activeChatNodeId"></span>
+                                    </div>
+                                    <div class="text-[10px] text-muted font-mono">Архив сообщений FunPay (Read-Only)</div>
+                                </div>
+                            </div>
+                            <a id="btnOpenFunPayChat" href="#" target="_blank" class="hidden px-2.5 py-1 rounded-lg bg-surface hover:bg-surface-hover border border-border text-xs text-zinc-200 font-mono flex items-center gap-1.5 transition-colors">
+                                <span>Открыть на FunPay</span>
+                                <i data-lucide="external-link" class="w-3 h-3"></i>
+                            </a>
+                        </div>
+                        <div id="messagesContainer" class="flex-1 overflow-y-auto p-4 space-y-3">
+                            <div class="h-full flex items-center justify-center text-muted text-xs font-mono">Выберите клиента слева для просмотра переписки</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+        </main>
+    </div>
+
+    <!-- Toast Notification -->
+    <div id="toast" class="fixed bottom-5 right-5 z-50 transform translate-y-10 opacity-0 pointer-events-none transition-all duration-200 px-4 py-2.5 rounded-xl bg-zinc-900 border border-zinc-700 text-xs text-zinc-100 shadow-2xl flex items-center gap-2.5">
+        <i data-lucide="check-circle-2" class="w-4 h-4 text-emerald-400"></i>
+        <span id="toastMsg">Обновлено</span>
+    </div>
+
+    <script>
+        // Application State
+        let analyticsData = null;
+        let allOrders = [];
+        let allChats = [];
+        let currentTab = 'overview';
+        let currentChartMode = 'stacked';
+        let currentOrderGameFilter = 'all';
+        let countdownSec = 300;
+
+        let mainChartInstance = null;
+        let donutChartInstance = null;
+
+        const TAB_TITLES = {
+            overview: 'Дашборд доходов',
+            orders: 'Продажи и чеки FunPay',
+            warehouse: 'Лоты и Складской запас',
+            finance: 'Юнит-экономика и Расходы',
+            chats: 'Клиенты и Диалоги'
+        };
+
+        function switchTab(tabId) {
+            currentTab = tabId;
+            document.querySelectorAll('.tab-pane').forEach(el => el.classList.remove('active'));
+            const pane = document.getElementById(`tab-${tabId}`);
+            if (pane) pane.classList.add('active');
+
+            document.querySelectorAll('.nav-item').forEach(btn => {
+                if (btn.getAttribute('data-tab') === tabId) {
+                    btn.classList.add('nav-active');
+                } else {
+                    btn.classList.remove('nav-active');
+                }
+            });
+
+            const headerTitle = document.getElementById('pageHeaderTitle');
+            if (headerTitle && TAB_TITLES[tabId]) {
+                headerTitle.textContent = TAB_TITLES[tabId];
+            }
+            lucide.createIcons();
+        }
+
+        function showToast(msg) {
+            const t = document.getElementById('toast');
+            document.getElementById('toastMsg').textContent = msg;
+            t.classList.remove('opacity-0', 'translate-y-10', 'pointer-events-none');
+            setTimeout(() => {
+                t.classList.add('opacity-0', 'translate-y-10', 'pointer-events-none');
+            }, 2800);
+        }
+
+        function handleQuickSearch(val) {
+            const q = val.trim();
+            if (q.length > 0 && currentTab !== 'orders') {
+                switchTab('orders');
+            }
+            const input = document.getElementById('orderSearchInput');
+            if (input) {
+                input.value = val;
+                applyOrdersFilter();
+            }
+        }
+
+        function escapeHtml(str) {
+            if (!str) return '';
+            return String(str)
+                .replace(/&/g, '&amp;')
+                .replace(/</g, '&lt;')
+                .replace(/>/g, '&gt;')
+                .replace(/"/g, '&quot;');
+        }
+
+        function formatRub(val) {
+            const num = Number(val) || 0;
+            return `${num.toFixed(2)} ₽`;
+        }
+
+        function statusBadgeHtml(st) {
+            const s = String(st || '');
+            if (s.includes('Закрыт')) {
+                return `<span class="inline-flex items-center gap-1 px-2 py-0.5 rounded-md text-[10px] font-mono bg-emerald-500/10 text-emerald-400 border border-emerald-500/20">✓ Закрыт</span>`;
+            }
+            if (s.includes('Возврат')) {
+                return `<span class="inline-flex items-center gap-1 px-2 py-0.5 rounded-md text-[10px] font-mono bg-rose-500/10 text-rose-400 border border-rose-500/20">↺ Возврат</span>`;
+            }
+            return `<span class="inline-flex items-center gap-1 px-2 py-0.5 rounded-md text-[10px] font-mono bg-blue-500/10 text-blue-400 border border-blue-500/20">● Оплачен</span>`;
+        }
+
+        function gameBadgeHtml(game) {
+            const g = String(game || '');
+            if (g.includes('Roblox')) {
+                return `<span class="inline-flex items-center gap-1 px-2 py-0.5 rounded-md text-[11px] font-medium bg-blue-500/10 text-blue-400 border border-blue-500/20">🧱 Roblox 18+</span>`;
+            }
+            if (g.includes('Hunt')) {
+                return `<span class="inline-flex items-center gap-1 px-2 py-0.5 rounded-md text-[11px] font-medium bg-rose-500/10 text-rose-400 border border-rose-500/20">🎯 Hunt 1896</span>`;
+            }
+            if (g.includes('Rust')) {
+                return `<span class="inline-flex items-center gap-1 px-2 py-0.5 rounded-md text-[11px] font-medium bg-amber-500/10 text-amber-400 border border-amber-500/20">🦀 Rust Drops</span>`;
+            }
+            return `<span class="px-2 py-0.5 rounded-md text-[11px] bg-surface text-zinc-300">${escapeHtml(g)}</span>`;
+        }
+
+        // ================= DATA FETCHING (LIVE GIST + API FALLBACK) =================
+        const GIST_RAW_BASE = 'https://gist.githubusercontent.com/EXOZODA/2bfaa9f64ef508343ce405e98da83579/raw';
+        let rawChatsById = {};
+
+        function extractQtyJS(o) {
+            if (o.qty) return o.qty;
+            const t = o.title || '';
+            const g = o.game || '';
+            const p = Number(o.price) || 0;
+            const m = t.match(/(\d+)\s*шт/i);
+            if (m) return parseInt(m[1], 10);
+            if (g === 'Roblox') {
+                if (p >= 80) return 100;
+                if (p >= 8) return 10;
+                if (p >= 1.5 && p < 2.5) return 2;
+            } else if (g === 'Rust') {
+                if (p >= 5) return 7;
+                if (p >= 2.3 && p < 3.0) return 3;
+                if (p >= 1.5 && p < 2.3) return 2;
+            }
+            return 1;
+        }
+
+        function parseRuDateJS(dateStr, refDateStr) {
+            const ref = refDateStr ? new Date(refDateStr.slice(0, 10) + 'T12:00:00') : new Date('2026-11-09T12:00:00');
+            if (!dateStr) return ref.toISOString().slice(0, 10);
+            const part = dateStr.split(',')[0].trim().toLowerCase();
+            if (part.includes('сегодня')) return ref.toISOString().slice(0, 10);
+            if (part.includes('вчера')) {
+                const y = new Date(ref.getTime() - 86400000);
+                return y.toISOString().slice(0, 10);
+            }
+            const months = { 'января': '01', 'февраля': '02', 'марта': '03', 'апреля': '04', 'мая': '05', 'июня': '06', 'июля': '07', 'августа': '08', 'сентября': '09', 'октября': '10', 'ноября': '11', 'декабря': '12' };
+            const m = part.match(/(\d{1,2})\s+([а-яё]+)/);
+            if (m && months[m[2]]) {
+                const d = String(m[1]).padStart(2, '0');
+                return `2026-${months[m[2]]}-${d}`;
+            }
+            return ref.toISOString().slice(0, 10);
+        }
+
+        function buildAnalyticsFromRaw(raw, purchases) {
+            const orders = raw.orders || [];
+            const chats = raw.chats || [];
+            const balanceHistory = raw.balance_history || [];
+            const balance = raw.balance || '0.00 ₽';
+            const balanceRub = parseFloat(balance.replace(/[^\d.,]/g, '').replace(',', '.')) || 0;
+            const scrapedAt = raw.scraped_at || '';
+            const refIso = scrapedAt ? scrapedAt.slice(0, 10) : '2026-11-09';
+            const yestIso = new Date(new Date(refIso + 'T12:00:00').getTime() - 86400000).toISOString().slice(0, 10);
+
+            rawChatsById = {};
+            chats.forEach(c => { rawChatsById[String(c.node_id)] = c; });
+
+            const unitsByGame = {
+                'Roblox': { name: 'Roblox 18+ Accounts', short: 'Roblox 18+', orders_count: 0, units_sold: 0, gross_revenue: 0, in_stock: 135, lots: {} },
+                'Rust': { name: 'Rust Twitch Drops', short: 'Rust Drops', orders_count: 0, units_sold: 0, gross_revenue: 0, in_stock: 156, lots: {} },
+                'Hunt: Showdown 1896': { name: 'Hunt: Showdown 1896', short: 'Hunt 1896', orders_count: 0, units_sold: 0, gross_revenue: 0, in_stock: 88, lots: {} }
+            };
+
+            let totalGross = 0, totalClosed = 0, totalPaid = 0, totalRefunded = 0, totalUnits = 0;
+            let closedOrders = 0, paidOrders = 0, refundedOrders = 0;
+            const dailyMap = {};
+            const buyerMap = {};
+
+            orders.forEach(o => {
+                const g = o.game || 'Other';
+                if (!unitsByGame[g]) return;
+                const p = Number(o.price) || 0;
+                const qty = extractQtyJS(o);
+                o.qty = qty;
+                const st = o.status || '';
+                const dIso = parseRuDateJS(o.date, scrapedAt);
+                o.date_iso = dIso;
+
+                if (!dailyMap[dIso]) {
+                    dailyMap[dIso] = { revenue: 0, net_revenue: 0, orders: 0, units: 0, Roblox: 0, Rust: 0, Hunt: 0 };
+                }
+                dailyMap[dIso].revenue += p;
+                dailyMap[dIso].orders += 1;
+                dailyMap[dIso].units += qty;
+                if (g === 'Roblox') dailyMap[dIso].Roblox += p;
+                else if (g === 'Rust') dailyMap[dIso].Rust += p;
+                else dailyMap[dIso].Hunt += p;
+
+                totalGross += p;
+                totalUnits += qty;
+                const ug = unitsByGame[g];
+                ug.orders_count += 1;
+                ug.units_sold += qty;
+                ug.gross_revenue += p;
+
+                let lotName = 'Основной лот';
+                const tLow = (o.title || '').toLowerCase();
+                if (g === 'Hunt: Showdown 1896') {
+                    if (p >= 10 || tLow.includes('неделя 1') || tLow.includes('комбо')) lotName = 'Комбо Неделя 1+2 (9 наград)';
+                    else if (tLow.includes('легендарн') || tLow.includes('охотник') || (p >= 4 && p <= 5.5)) lotName = 'Финал: Легендарный Охотник + 5 наград';
+                    else lotName = 'Неделя 2 (Hide and Seek, 4 награды)';
+                } else if (g === 'Rust') {
+                    lotName = 'Rust 54 раунд (5/5 наград)';
+                } else if (g === 'Roblox') {
+                    lotName = qty >= 100 ? 'Опт: Пак 100 аккаунтов Roblox 18+' : 'Чистые аккаунты Roblox 18+ (отлёжка 1+ день)';
+                }
+                if (!ug.lots[lotName]) ug.lots[lotName] = { units: 0, orders: 0, revenue: 0 };
+                ug.lots[lotName].units += qty;
+                ug.lots[lotName].orders += 1;
+                ug.lots[lotName].revenue += p;
+
+                if (st.includes('Закрыт')) {
+                    closedOrders++;
+                    totalClosed += p;
+                    dailyMap[dIso].net_revenue += p;
+                } else if (st.includes('Оплачен')) {
+                    paidOrders++;
+                    totalPaid += p;
+                    dailyMap[dIso].net_revenue += p;
+                } else if (st.includes('Возврат')) {
+                    refundedOrders++;
+                    totalRefunded += p;
+                }
+
+                if (!st.includes('Возврат')) {
+                    const b = o.buyer || 'Unknown';
+                    if (!buyerMap[b]) buyerMap[b] = { buyer: b, orders_count: 0, units_bought: 0, total_spent: 0, games: new Set(), last_date: o.date || '' };
+                    buyerMap[b].orders_count += 1;
+                    buyerMap[b].units_bought += qty;
+                    buyerMap[b].total_spent += p;
+                    buyerMap[b].games.add(ug.short);
+                }
+            });
+
+            Object.values(unitsByGame).forEach(ug => {
+                const pool = ug.units_sold + ug.in_stock;
+                ug.sell_through_pct = pool > 0 ? Math.round((ug.units_sold / pool) * 1000) / 10 : 0;
+                ug.avg_price_per_unit = ug.units_sold > 0 ? Math.round((ug.gross_revenue / ug.units_sold) * 100) / 100 : 0;
+            });
+
+            const projectPurchases = [];
+            let twitchSpent = 0;
+            const dailyCostMap = {};
+            (purchases || []).forEach(p => {
+                const d = (p.date || '').toLowerCase();
+                const st = (p.status || '').toLowerCase();
+                if (st.includes('закрыт') && (d.includes('октябр') || d.includes('ноябр')) && !d.includes('2025')) {
+                    projectPurchases.push(p);
+                    const val = Number(p.price) || 0;
+                    const tLow = (p.title || '').toLowerCase();
+                    const pIso = parseRuDateJS(p.date, scrapedAt);
+                    if (tLow.includes('twitch') || tLow.includes('твич')) {
+                        twitchSpent += val;
+                        dailyCostMap[pIso] = (dailyCostMap[pIso] || 0) + val;
+                    }
+                }
+            });
+
+            const completedTurnover = totalClosed + totalPaid;
+            const netProfit = completedTurnover - twitchSpent;
+            const roiPct = twitchSpent > 0 ? Math.round((completedTurnover / twitchSpent) * 1000) / 10 : 100;
+
+            const allDates = Object.keys(dailyMap).sort();
+            const shortMon = { '10': 'окт', '11': 'ноя', '12': 'дек' };
+            const dailySeries = { labels: [], revenue: [], net_revenue: [], orders: [], units: [], roblox_rev: [], rust_rev: [], hunt_rev: [], cumulative_revenue: [], cumulative_cost: [] };
+            let cumRev = 0, cumCost = 0;
+            allDates.forEach(iso => {
+                const [, mm, dd] = iso.split('-');
+                dailySeries.labels.push(`${parseInt(dd, 10)} ${shortMon[mm] || mm}`);
+                const inf = dailyMap[iso];
+                cumRev += inf.net_revenue;
+                cumCost += (dailyCostMap[iso] || 0);
+                dailySeries.revenue.push(Number(inf.revenue.toFixed(2)));
+                dailySeries.net_revenue.push(Number(inf.net_revenue.toFixed(2)));
+                dailySeries.orders.push(inf.orders);
+                dailySeries.units.push(inf.units);
+                dailySeries.roblox_rev.push(Number(inf.Roblox.toFixed(2)));
+                dailySeries.rust_rev.push(Number(inf.Rust.toFixed(2)));
+                dailySeries.hunt_rev.push(Number(inf.Hunt.toFixed(2)));
+                dailySeries.cumulative_revenue.push(Number(cumRev.toFixed(2)));
+                dailySeries.cumulative_cost.push(Number(cumCost.toFixed(2)));
+            });
+
+            const todayInf = dailyMap[refIso] || { revenue: 0, orders: 0, units: 0 };
+            const yestInf = dailyMap[yestIso] || { revenue: 0, orders: 0, units: 0 };
+
+            const topBuyers = Object.values(buyerMap).map(b => ({
+                buyer: b.buyer,
+                orders_count: b.orders_count,
+                units_bought: b.units_bought,
+                total_spent: Number(b.total_spent.toFixed(2)),
+                share_pct: completedTurnover > 0 ? Math.round((b.total_spent / completedTurnover) * 1000) / 10 : 0,
+                games: Array.from(b.games).join(', '),
+                last_date: b.last_date
+            })).sort((a, b) => b.total_spent - a.total_spent).slice(0, 15);
+
+            const lotsSummary = [];
+            Object.entries(unitsByGame).forEach(([g, ug]) => {
+                Object.entries(ug.lots).forEach(([lname, linfo]) => {
+                    lotsSummary.push({
+                        game: g,
+                        lot: lname,
+                        units_sold: linfo.units,
+                        orders_count: linfo.orders,
+                        revenue: Number(linfo.revenue.toFixed(2)),
+                        avg_price: linfo.units > 0 ? Number((linfo.revenue / linfo.units).toFixed(2)) : 0,
+                        in_stock: ug.in_stock
+                    });
+                });
+            });
+            lotsSummary.sort((a, b) => b.revenue - a.revenue);
+
+            return {
+                ok: true,
+                user: raw.user || 'EXOZODA',
+                balance: balance,
+                scraped_at: scrapedAt,
+                metrics: {
+                    total_turnover: Number(totalGross.toFixed(2)),
+                    completed_turnover: Number(completedTurnover.toFixed(2)),
+                    closed_sum: Number(totalClosed.toFixed(2)),
+                    paid_sum: Number(totalPaid.toFixed(2)),
+                    refunded_sum: Number(totalRefunded.toFixed(2)),
+                    today_revenue: Number(todayInf.revenue.toFixed(2)),
+                    today_orders: todayInf.orders,
+                    today_units: todayInf.units,
+                    yesterday_revenue: Number(yestInf.revenue.toFixed(2)),
+                    yesterday_orders: yestInf.orders,
+                    yesterday_units: yestInf.units,
+                    total_units_sold: totalUnits,
+                    rust_units_sold: unitsByGame['Rust'].units_sold,
+                    hunt_units_sold: unitsByGame['Hunt: Showdown 1896'].units_sold,
+                    roblox_units_sold: unitsByGame['Roblox'].units_sold,
+                    twitch_purchases_spent: Number(twitchSpent.toFixed(2)),
+                    net_operating_profit: Number(netProfit.toFixed(2)),
+                    roi_pct: roiPct,
+                    stock_value_rub: 760.4,
+                    total_in_stock: 379,
+                    balance_rub: balanceRub,
+                    total_orders: orders.length,
+                    closed_orders: closedOrders,
+                    paid_orders: paidOrders,
+                    refunded_orders: refundedOrders,
+                    avg_order_value: orders.length > 0 ? Number((totalGross / orders.length).toFixed(2)) : 0,
+                    unique_buyers: Object.keys(buyerMap).length,
+                    chat_count: chats.length
+                },
+                daily_series: dailySeries,
+                units_by_game: unitsByGame,
+                lots_summary: lotsSummary,
+                top_buyers: topBuyers,
+                balance_history: balanceHistory,
+                purchases: projectPurchases.slice(0, 50),
+                stock: { roblox_available: 135, roblox_retail: 35, roblox_pack100: 100, rust_accounts: 156, rust_drops: 990, hunt_accounts: 88 },
+                _raw_orders: orders,
+                _raw_chats: chats
+            };
+        }
+
+        async function fetchAllData() {
+            try {
+                let usedGist = false;
+                try {
+                    const ts = Date.now();
+                    const [gFull, gPurch] = await Promise.all([
+                        fetch(`${GIST_RAW_BASE}/funpay_full_data.json?t=${ts}`),
+                        fetch(`${GIST_RAW_BASE}/funpay_purchases.json?t=${ts}`)
+                    ]);
+                    if (gFull.ok) {
+                        const rawFull = await gFull.json();
+                        const rawPurch = gPurch.ok ? await gPurch.json() : [];
+                        const built = buildAnalyticsFromRaw(rawFull, rawPurch);
+                        analyticsData = built;
+                        allOrders = built._raw_orders || [];
+                        allChats = built._raw_chats || [];
+
+                        renderOverview(built);
+                        renderWarehouseAndLots(built);
+                        renderFinanceTab(built);
+                        renderVipBuyers(built.top_buyers || []);
+                        renderCharts(built);
+                        renderRecentOrders(allOrders.slice(0, 9));
+                        applyOrdersFilter();
+                        renderChatsList(allChats);
+                        usedGist = true;
+                    }
+                } catch (gistErr) {
+                    console.warn('Gist fetch fallback to local API:', gistErr);
+                }
+
+                if (!usedGist) {
+                    const [aRes, oRes, cRes] = await Promise.all([
+                        fetch('/api/analytics'),
+                        fetch('/api/orders?limit=300'),
+                        fetch('/api/chats')
+                    ]);
+
+                    const aData = await aRes.json();
+                    if (aData && aData.ok) {
+                        analyticsData = aData;
+                        renderOverview(aData);
+                        renderWarehouseAndLots(aData);
+                        renderFinanceTab(aData);
+                        renderVipBuyers(aData.top_buyers || []);
+                        renderCharts(aData);
+                    }
+
+                    const oData = await oRes.json();
+                    if (oData && oData.ok) {
+                        allOrders = oData.orders || [];
+                        renderRecentOrders(allOrders.slice(0, 9));
+                        applyOrdersFilter();
+                    }
+
+                    const cData = await cRes.json();
+                    if (cData && cData.ok) {
+                        allChats = cData.chats || [];
+                        renderChatsList(allChats);
+                    }
+                }
+
+                lucide.createIcons();
+            } catch (err) {
+                console.error('Error loading dashboard data:', err);
+            }
+        }
+
+        function renderOverview(d) {
+            const m = d.metrics || {};
+            const balStr = d.balance || formatRub(m.balance_rub || 0);
+
+            document.getElementById('topBalanceValue').textContent = balStr;
+            document.getElementById('mobileBalBadge').textContent = balStr;
+            document.getElementById('kpiBalance').textContent = balStr;
+            document.getElementById('sideUserName').textContent = d.user || 'EXOZODA';
+
+            if (d.scraped_at) {
+                const shortTime = d.scraped_at.slice(5, 16);
+                document.getElementById('sideScrapedAt').textContent = shortTime;
+                document.getElementById('topScrapedTime').textContent = `Синхр: ${d.scraped_at}`;
+            }
+
+            document.getElementById('kpiPendingPaid').textContent = `+${formatRub(m.paid_sum || 0)} в холде подтв.`;
+            document.getElementById('kpiPaidOrdersBadge').textContent = `${m.paid_orders || 0} зак. ждут подтверждения`;
+
+            document.getElementById('kpiNetTurnover').textContent = formatRub(m.completed_turnover || 0);
+            document.getElementById('kpiGrossTurnover').textContent = formatRub(m.total_turnover || 0);
+            document.getElementById('kpiRoiBadge').textContent = `ROI ${m.roi_pct || 196}%`;
+            document.getElementById('kpiClosedSum').textContent = formatRub(m.closed_sum || 0);
+            document.getElementById('kpiRefundSum').textContent = formatRub(m.refunded_sum || 0);
+
+            const todayRev = m.today_revenue || 0;
+            const yestRev = m.yesterday_revenue || 0;
+            document.getElementById('kpiTodayRev').textContent = formatRub(todayRev);
+            document.getElementById('kpiTodayOrders').textContent = `${m.today_orders || 0} заказов`;
+            document.getElementById('kpiTodayUnits').textContent = `${m.today_units || 0} шт. отгружено`;
+            document.getElementById('kpiYesterdaySummary').textContent = `${formatRub(yestRev)} (${m.yesterday_orders || 0} зак.)`;
+
+            const deltaEl = document.getElementById('kpiTodayDelta');
+            if (yestRev > 0) {
+                const diffPct = Math.round(((todayRev - yestRev) / yestRev) * 100);
+                deltaEl.textContent = `${diffPct >= 0 ? '+' : ''}${diffPct}% ко вчера`;
+                deltaEl.className = diffPct >= 0
+                    ? 'text-[11px] font-mono px-1.5 py-0.5 rounded bg-emerald-500/15 text-emerald-400 border border-emerald-500/30'
+                    : 'text-[11px] font-mono px-1.5 py-0.5 rounded bg-amber-500/15 text-amber-300 border border-amber-500/30';
+            }
+
+            document.getElementById('kpiTotalUnits').textContent = `${m.total_units_sold || 0} шт.`;
+            document.getElementById('kpiTotalOrdersCount').textContent = `(${m.total_orders || 0} чеков)`;
+            document.getElementById('kpiAvgOrder').textContent = formatRub(m.avg_order_value || 0);
+            document.getElementById('kpiUniqueBuyers').textContent = m.unique_buyers || 0;
+            document.getElementById('kpiStockValue').textContent = `${m.total_in_stock || 379} шт. (~${Math.round(m.stock_value_rub || 760)} ₽)`;
+
+            document.getElementById('navBadgeOrders').textContent = m.total_orders || 0;
+            document.getElementById('navBadgeStock').textContent = `${m.total_in_stock || 379} шт`;
+            document.getElementById('navBadgeChats').textContent = m.chat_count || 50;
+
+            // Render 3 Game Direction Cards
+            const ubg = d.units_by_game || {};
+            const gamesOrder = [
+                { key: 'Roblox', badge: 'Маржа 100% · Автофарм LTE', border: 'border-blue-500/30', accent: 'text-blue-400', bar: 'bg-blue-500', icon: '🧱' },
+                { key: 'Rust', badge: 'Раунд 54 · Автовыдача 24/7', border: 'border-amber-500/30', accent: 'text-amber-400', bar: 'bg-amber-500', icon: '🦀' },
+                { key: 'Hunt: Showdown 1896', badge: 'Топ-1 в разделе #1744', border: 'border-rose-500/30', accent: 'text-rose-400', bar: 'bg-rose-500', icon: '🎯' }
+            ];
+
+            const container = document.getElementById('gameCardsContainer');
+            container.innerHTML = gamesOrder.map(cfg => {
+                const g = ubg[cfg.key] || {};
+                const rev = g.gross_revenue || 0;
+                const sold = g.units_sold || 0;
+                const ord = g.orders_count || 0;
+                const stock = g.in_stock || 0;
+                const avg = g.avg_price_per_unit || 0;
+                const stPct = g.sell_through_pct || 0;
+
+                return `
+                    <div class="glass-card p-5 space-y-4 border ${cfg.border}">
+                        <div class="flex items-start justify-between">
+                            <div class="flex items-center gap-2.5">
+                                <span class="text-xl">${cfg.icon}</span>
+                                <div>
+                                    <h3 class="text-sm font-semibold text-white">${escapeHtml(g.name || cfg.key)}</h3>
+                                    <span class="text-[11px] font-mono text-muted">${cfg.badge}</span>
+                                </div>
+                            </div>
+                            <div class="text-right">
+                                <div class="text-lg font-mono font-bold ${cfg.accent}">${formatRub(rev)}</div>
+                                <div class="text-[10px] font-mono text-muted">выручка</div>
+                            </div>
+                        </div>
+
+                        <div class="grid grid-cols-3 gap-2 pt-2 border-t border-border/60 font-mono text-xs">
+                            <div class="p-2 rounded-lg bg-surface/60">
+                                <div class="text-[10px] text-muted">Продано</div>
+                                <div class="font-bold text-white mt-0.5">${sold} шт.</div>
+                            </div>
+                            <div class="p-2 rounded-lg bg-surface/60">
+                                <div class="text-[10px] text-muted">Заказов</div>
+                                <div class="font-bold text-zinc-200 mt-0.5">${ord} чек.</div>
+                            </div>
+                            <div class="p-2 rounded-lg bg-surface/60">
+                                <div class="text-[10px] text-muted">В наличии</div>
+                                <div class="font-bold text-emerald-400 mt-0.5">${stock} шт.</div>
+                            </div>
+                        </div>
+
+                        <div class="space-y-1.5">
+                            <div class="flex justify-between text-[11px] font-mono">
+                                <span class="text-muted">Реализация пула (${stPct}%)</span>
+                                <span class="text-zinc-300">Ср. цена: ${formatRub(avg)} / шт</span>
+                            </div>
+                            <div class="w-full h-1.5 bg-surface rounded-full overflow-hidden">
+                                <div class="${cfg.bar} h-full rounded-full" style="width: ${Math.min(100, Math.max(6, stPct))}%"></div>
+                            </div>
+                        </div>
+                    </div>
+                `;
+            }).join('');
+
+            // Top Buyers Mini List on Overview
+            const topList = document.getElementById('topBuyersMiniList');
+            const top5 = (d.top_buyers || []).slice(0, 5);
+            topList.innerHTML = top5.map((b, idx) => `
+                <div class="flex items-center justify-between p-2 rounded-lg bg-surface/50 hover:bg-surface transition-colors text-xs">
+                    <div class="flex items-center gap-2.5 min-w-0">
+                        <span class="w-5 h-5 rounded bg-zinc-800 text-zinc-300 font-mono text-[10px] flex items-center justify-center font-bold">${idx + 1}</span>
+                        <div class="min-w-0">
+                            <div class="font-medium text-white truncate">${escapeHtml(b.buyer)}</div>
+                            <div class="text-[10px] text-muted font-mono">${escapeHtml(b.games)} · ${b.orders_count} зак. (${b.units_bought} шт.)</div>
+                        </div>
+                    </div>
+                    <div class="text-right font-mono">
+                        <div class="font-bold text-emerald-400">${formatRub(b.total_spent)}</div>
+                        <div class="text-[10px] text-muted">${b.share_pct}% оборота</div>
+                    </div>
+                </div>
+            `).join('');
+        }
+
+        function renderRecentOrders(orders) {
+            const tbody = document.getElementById('recentOrdersBody');
+            if (!orders || !orders.length) {
+                tbody.innerHTML = `<tr><td colspan="6" class="p-6 text-center text-muted">Заказы не найдены</td></tr>`;
+                return;
+            }
+            tbody.innerHTML = orders.map(o => `
+                <tr class="hover:bg-surface/50 transition-colors">
+                    <td class="py-2.5 px-4 font-mono">
+                        <a href="https://funpay.com/orders/${escapeHtml((o.id || '').replace('#', ''))}/" target="_blank" class="text-zinc-200 hover:text-emerald-400 font-semibold">${escapeHtml(o.id)}</a>
+                        <div class="text-[10px] text-muted">${escapeHtml(o.date)}</div>
+                    </td>
+                    <td class="py-2.5 px-3 font-medium text-white">${escapeHtml(o.buyer)}</td>
+                    <td class="py-2.5 px-3">${gameBadgeHtml(o.game)}</td>
+                    <td class="py-2.5 px-3 text-center font-mono text-zinc-300">${o.qty || 1} шт.</td>
+                    <td class="py-2.5 px-3">${statusBadgeHtml(o.status)}</td>
+                    <td class="py-2.5 px-4 text-right font-mono font-bold text-white">${formatRub(o.price)}</td>
+                </tr>
+            `).join('');
+        }
+
+        // ================= ORDERS TAB & FILTERING =================
+        function setOrderGameFilter(game) {
+            currentOrderGameFilter = game;
+            document.querySelectorAll('.order-game-btn').forEach(btn => {
+                if (btn.getAttribute('data-game') === game) {
+                    btn.classList.add('chart-btn-active');
+                    btn.classList.remove('text-muted');
+                } else {
+                    btn.classList.remove('chart-btn-active');
+                    btn.classList.add('text-muted');
+                }
+            });
+            applyOrdersFilter();
+        }
+
+        function applyOrdersFilter() {
+            const stFilter = document.getElementById('orderStatusSelect').value;
+            const q = (document.getElementById('orderSearchInput').value || '').toLowerCase().trim();
+
+            const filtered = allOrders.filter(o => {
+                const gMatch = currentOrderGameFilter === 'all' || (o.game && o.game.toLowerCase().includes(currentOrderGameFilter.toLowerCase()));
+                const sMatch = stFilter === 'all' || (o.status && o.status.includes(stFilter));
+                const qMatch = !q ||
+                    (o.id && o.id.toLowerCase().includes(q)) ||
+                    (o.buyer && o.buyer.toLowerCase().includes(q)) ||
+                    (o.title && o.title.toLowerCase().includes(q));
+                return gMatch && sMatch && qMatch;
+            });
+
+            const totalRev = filtered.reduce((acc, o) => acc + (Number(o.price) || 0), 0);
+            const totalUnits = filtered.reduce((acc, o) => acc + (Number(o.qty) || 1), 0);
+            const avg = filtered.length > 0 ? totalRev / filtered.length : 0;
+
+            document.getElementById('fltOrdersCount').textContent = filtered.length;
+            document.getElementById('fltUnitsCount').textContent = `${totalUnits} шт.`;
+            document.getElementById('fltRevenueSum').textContent = formatRub(totalRev);
+            document.getElementById('fltAvgCheck').textContent = formatRub(avg);
+
+            const tbody = document.getElementById('allOrdersTableBody');
+            if (!filtered.length) {
+                tbody.innerHTML = `<tr><td colspan="8" class="p-8 text-center text-muted font-mono">Ничего не найдено по заданному фильтру</td></tr>`;
+                return;
+            }
+
+            tbody.innerHTML = filtered.map(o => `
+                <tr class="hover:bg-surface/50 transition-colors">
+                    <td class="py-3 px-4 font-mono font-semibold">
+                        <a href="https://funpay.com/orders/${escapeHtml((o.id || '').replace('#', ''))}/" target="_blank" class="text-zinc-200 hover:text-emerald-400 underline decoration-zinc-700">${escapeHtml(o.id)}</a>
+                    </td>
+                    <td class="py-3 px-3 font-mono text-muted text-[11px]">${escapeHtml(o.date)}</td>
+                    <td class="py-3 px-3 font-medium text-white">${escapeHtml(o.buyer)}</td>
+                    <td class="py-3 px-3">${gameBadgeHtml(o.game)}</td>
+                    <td class="py-3 px-3 text-zinc-300 max-w-md truncate" title="${escapeHtml(o.title)}">${escapeHtml(o.title)}</td>
+                    <td class="py-3 px-3 text-center font-mono font-semibold text-zinc-200">${o.qty || 1} шт.</td>
+                    <td class="py-3 px-3">${statusBadgeHtml(o.status)}</td>
+                    <td class="py-3 px-4 text-right font-mono font-bold text-white">${formatRub(o.price)}</td>
+                </tr>
+            `).join('');
+        }
+
+        function exportOrdersCSV() {
+            if (!allOrders.length) return;
+            const header = ['Order_ID,Date,Buyer,Game,Qty,Status,Price_RUB,Title'];
+            const rows = allOrders.map(o =>
+                `"${o.id}","${o.date}","${o.buyer}","${o.game}","${o.qty || 1}","${o.status}","${o.price}","${(o.title || '').replace(/"/g, '""')}"`
+            );
+            const blob = new Blob(['\uFEFF' + header.concat(rows).join('\n')], { type: 'text/csv;charset=utf-8;' });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = `tdfarm_funpay_orders_${new Date().toISOString().slice(0, 10)}.csv`;
+            a.click();
+            showToast('CSV-отчет по заказам сохранен');
+        }
+
+        // ================= WAREHOUSE & LOTS TAB =================
+        function renderWarehouseAndLots(d) {
+            const st = d.stock || {};
+            const m = d.metrics || {};
+
+            document.getElementById('whRobloxTotal').textContent = `${st.roblox_available || 135} шт.`;
+            document.getElementById('whRobloxRetail').textContent = `${st.roblox_retail || 35} шт.`;
+            document.getElementById('whRobloxPack').textContent = `${st.roblox_pack100 || 100} шт. (1 пак)`;
+            document.getElementById('whRobloxSold').textContent = `${m.roblox_units_sold || 128} шт.`;
+
+            document.getElementById('whHuntTotal').textContent = `${st.hunt_accounts || 88} шт.`;
+            document.getElementById('whRustTotal').textContent = `${st.rust_accounts || 156} шт.`;
+            document.getElementById('whRustAccs').textContent = `${st.rust_accounts || 156} шт.`;
+            document.getElementById('whRustDrops').textContent = `${st.rust_drops || 990} шт.`;
+            document.getElementById('whRustSold').textContent = `${m.rust_units_sold || 102} шт.`;
+
+            const lots = d.lots_summary || [];
+            const tbody = document.getElementById('catalogueTableBody');
+            if (!lots.length) {
+                tbody.innerHTML = `<tr><td colspan="7" class="p-6 text-center text-muted">Нет данных по лотам</td></tr>`;
+                return;
+            }
+            tbody.innerHTML = lots.map(l => `
+                <tr class="hover:bg-surface/50 transition-colors">
+                    <td class="py-3 px-4">${gameBadgeHtml(l.game)}</td>
+                    <td class="py-3 px-3 font-medium text-white">${escapeHtml(l.lot)}</td>
+                    <td class="py-3 px-3 text-right font-mono font-bold text-zinc-100">${l.units_sold} шт.</td>
+                    <td class="py-3 px-3 text-right font-mono text-zinc-300">${l.orders_count}</td>
+                    <td class="py-3 px-3 text-right font-mono text-zinc-300">${formatRub(l.avg_price)}</td>
+                    <td class="py-3 px-3 text-right font-mono font-bold text-emerald-400">${formatRub(l.revenue)}</td>
+                    <td class="py-3 px-4 text-right font-mono">
+                        <span class="px-2 py-0.5 rounded bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 text-[11px]">${l.in_stock} шт.</span>
+                    </td>
+                </tr>
+            `).join('');
+        }
+
+        // ================= FINANCE & PNL TAB =================
+        function renderFinanceTab(d) {
+            const m = d.metrics || {};
+            document.getElementById('finNetRevenue').textContent = formatRub(m.completed_turnover || 0);
+            document.getElementById('finTwitchSpent').textContent = formatRub(m.twitch_purchases_spent || 0);
+            const prof = m.net_operating_profit || 0;
+            document.getElementById('finOperatingProfit').textContent = `${prof >= 0 ? '+' : ''}${formatRub(prof)}`;
+            document.getElementById('finAssetSub').textContent = `+ ${formatRub(m.stock_value_rub || 760.4)} в готовом товаре`;
+            document.getElementById('finLiveBalBadge').textContent = d.balance || '192.50 ₽';
+            document.getElementById('finPurchasesTotalBadge').textContent = `${formatRub(m.twitch_purchases_spent || 0)} (сырье)`;
+
+            // Balance History
+            const bh = d.balance_history || [];
+            const bhContainer = document.getElementById('balanceHistoryContainer');
+            if (!bh.length) {
+                bhContainer.innerHTML = `<div class="p-6 text-center text-muted">Нет записей</div>`;
+            } else {
+                bhContainer.innerHTML = bh.map(item => `
+                    <div class="p-3 px-4 flex items-center justify-between hover:bg-surface/40 transition-colors">
+                        <div>
+                            <div class="text-zinc-100 font-medium">${escapeHtml(item.title)}</div>
+                            <div class="text-[10px] text-muted">${escapeHtml((item.date || '').replace(/\n/g, ' · '))}</div>
+                        </div>
+                        <span class="font-bold text-emerald-400">${escapeHtml(item.price)}</span>
+                    </div>
+                `).join('');
+            }
+
+            // Purchases Table
+            const purchases = d.purchases || [];
+            const pBody = document.getElementById('purchasesTableBody');
+            if (!purchases.length) {
+                pBody.innerHTML = `<tr><td colspan="5" class="p-6 text-center text-muted">Закупки не найдены</td></tr>`;
+            } else {
+                pBody.innerHTML = purchases.map(p => `
+                    <tr class="hover:bg-surface/40 transition-colors">
+                        <td class="py-2.5 px-4 text-muted">${escapeHtml(p.id)}</td>
+                        <td class="py-2.5 px-3 font-sans text-zinc-200 max-w-xs truncate" title="${escapeHtml(p.title)}">${escapeHtml(p.title)}</td>
+                        <td class="py-2.5 px-3 text-zinc-300">${escapeHtml(p.seller)}</td>
+                        <td class="py-2.5 px-3 text-muted text-[11px]">${escapeHtml(p.date)}</td>
+                        <td class="py-2.5 px-4 text-right font-bold text-amber-400">${formatRub(p.price)}</td>
+                    </tr>
+                `).join('');
+            }
+        }
+
+        // ================= CUSTOMERS & CHATS TAB =================
+        function renderVipBuyers(buyers) {
+            const tbody = document.getElementById('vipBuyersTableBody');
+            if (!buyers || !buyers.length) {
+                tbody.innerHTML = `<tr><td colspan="7" class="p-6 text-center text-muted">Нет данных</td></tr>`;
+                return;
+            }
+            tbody.innerHTML = buyers.slice(0, 10).map((b, i) => `
+                <tr class="hover:bg-surface/40 transition-colors">
+                    <td class="py-2.5 px-4 font-mono text-muted">#${i + 1}</td>
+                    <td class="py-2.5 px-3 font-semibold text-white">${escapeHtml(b.buyer)}</td>
+                    <td class="py-2.5 px-3 text-zinc-300 font-mono text-[11px]">${escapeHtml(b.games)}</td>
+                    <td class="py-2.5 px-3 text-center font-mono">${b.orders_count}</td>
+                    <td class="py-2.5 px-3 text-center font-mono font-semibold text-blue-400">${b.units_bought} шт.</td>
+                    <td class="py-2.5 px-3 font-mono text-muted text-[11px]">${escapeHtml(b.last_date)}</td>
+                    <td class="py-2.5 px-4 text-right font-mono font-bold text-emerald-400">${formatRub(b.total_spent)} <span class="text-[10px] text-muted font-normal">(${b.share_pct}%)</span></td>
+                </tr>
+            `).join('');
+        }
+
+        function renderChatsList(chats) {
+            const container = document.getElementById('contactsContainer');
+            if (!chats || !chats.length) {
+                container.innerHTML = `<div class="p-6 text-center text-xs text-muted">Диалоги не найдены</div>`;
+                return;
+            }
+
+            container.innerHTML = chats.map(c => {
+                const uName = c.user || c.user_name || 'Клиент';
+                const prev = c.preview || c.last_message || 'Без текста';
+                const time = c.last_time || '';
+                const msgCnt = c.message_count || 0;
+                return `
+                    <div onclick="openChat('${escapeHtml(c.node_id)}', '${escapeHtml(uName)}')" class="chat-item p-3 hover:bg-surface transition-colors cursor-pointer flex items-center justify-between gap-2" data-node="${escapeHtml(c.node_id)}" data-user="${escapeHtml(uName.toLowerCase())}">
+                        <div class="flex items-center gap-2.5 min-w-0">
+                            <div class="h-8 w-8 rounded-lg bg-zinc-800 border border-zinc-700 flex items-center justify-center font-mono text-xs font-bold text-zinc-200 flex-shrink-0">
+                                ${escapeHtml(uName.charAt(0).toUpperCase())}
+                            </div>
+                            <div class="min-w-0">
+                                <div class="flex items-center gap-1.5">
+                                    <span class="font-semibold text-xs text-white truncate">${escapeHtml(uName)}</span>
+                                    <span class="text-[10px] font-mono text-muted">(${msgCnt})</span>
+                                </div>
+                                <div class="text-[11px] text-muted truncate">${escapeHtml(prev)}</div>
+                            </div>
+                        </div>
+                        <span class="text-[10px] font-mono text-muted flex-shrink-0">${escapeHtml(time)}</span>
+                    </div>
+                `;
+            }).join('');
+
+            if (chats.length > 0) {
+                openChat(chats[0].node_id, chats[0].user || chats[0].user_name);
+            }
+        }
+
+        function filterChats() {
+            const q = (document.getElementById('chatSearchInput').value || '').toLowerCase().trim();
+            document.querySelectorAll('.chat-item').forEach(el => {
+                const u = el.getAttribute('data-user') || '';
+                el.style.display = u.includes(q) ? 'flex' : 'none';
+            });
+        }
+
+        async function openChat(nodeId, userName) {
+            document.getElementById('activeChatUser').textContent = userName;
+            document.getElementById('activeChatNodeId').textContent = `Node #${nodeId}`;
+            document.getElementById('activeChatAvatar').textContent = (userName || 'U').charAt(0).toUpperCase();
+
+            const btnFunPay = document.getElementById('btnOpenFunPayChat');
+            btnFunPay.href = `https://funpay.com/chat/?node=${nodeId}`;
+            btnFunPay.classList.remove('hidden');
+
+            const container = document.getElementById('messagesContainer');
+            container.innerHTML = `<div class="h-full flex items-center justify-center text-muted text-xs font-mono">Загрузка переписки...</div>`;
+
+            try {
+                let msgs = [];
+                if (rawChatsById && rawChatsById[String(nodeId)] && rawChatsById[String(nodeId)].messages) {
+                    msgs = rawChatsById[String(nodeId)].messages;
+                } else {
+                    const res = await fetch(`/api/chat/${nodeId}`);
+                    const data = await res.json();
+                    msgs = data.messages || (data.chat && data.chat.messages) || [];
+                }
+
+                if (!msgs.length) {
+                    container.innerHTML = `<div class="h-full flex items-center justify-center text-muted text-xs">Сообщений нет</div>`;
+                    return;
+                }
+
+                container.innerHTML = msgs.map(m => {
+                    const isOur = m.is_our || m.author === 'EXOZODA' || m.by_bot;
+                    const isSys = m.author === 'FunPay' || m.author === 'System';
+                    if (isSys) {
+                        return `
+                            <div class="flex justify-center my-1">
+                                <div class="px-3 py-1.5 rounded-lg bg-emerald-500/10 border border-emerald-500/20 text-[11px] font-mono text-emerald-300 max-w-[85%] text-center">
+                                    ${escapeHtml(m.text)} <span class="text-muted ml-1">${escapeHtml(m.date || '')}</span>
+                                </div>
+                            </div>
+                        `;
+                    }
+                    return `
+                        <div class="flex flex-col ${isOur ? 'items-end' : 'items-start'}">
+                            <div class="max-w-[78%] px-3.5 py-2 rounded-xl text-xs leading-relaxed ${isOur ? 'bg-emerald-600/20 border border-emerald-500/30 text-zinc-100' : 'bg-surface border border-border text-zinc-200'}">
+                                <div class="whitespace-pre-wrap break-words">${escapeHtml(m.text)}</div>
+                                <div class="text-[10px] mt-1 font-mono text-muted text-right">
+                                    ${escapeHtml(m.author || (isOur ? 'EXOZODA' : userName))} · ${escapeHtml((m.date || '').replace(/\n/g, ' '))}
+                                </div>
+                            </div>
+                        </div>
+                    `;
+                }).join('');
+                container.scrollTop = container.scrollHeight;
+            } catch (err) {
+                container.innerHTML = `<div class="h-full flex items-center justify-center text-rose-400 text-xs">Ошибка чтения чата</div>`;
+            }
+        }
+
+        // ================= CHARTS (CHART.JS) =================
+        function setMainChartMode(mode) {
+            currentChartMode = mode;
+            document.querySelectorAll('.chart-mode-btn').forEach(b => {
+                b.classList.remove('chart-btn-active');
+                b.classList.add('text-muted');
+            });
+            const activeBtn = document.getElementById(
+                mode === 'stacked' ? 'btnChartStacked' : mode === 'cumulative' ? 'btnChartCumulative' : 'btnChartVolume'
+            );
+            if (activeBtn) {
+                activeBtn.classList.add('chart-btn-active');
+                activeBtn.classList.remove('text-muted');
+            }
+            if (analyticsData) {
+                renderMainChart(analyticsData);
+            }
+        }
+
+        function renderCharts(d) {
+            renderMainChart(d);
+            renderDonutChart(d);
+        }
+
+        function renderMainChart(d) {
+            const ds = d.daily_series || {};
+            const labels = ds.labels || [];
+            if (labels.length >= 2) {
+                document.getElementById('chartDateRangeBadge').textContent = `${labels[0]} – ${labels[labels.length - 1]}`;
+            }
+
+            const ctx = document.getElementById('mainRevenueChart');
+            if (!ctx) return;
+            if (mainChartInstance) mainChartInstance.destroy();
+
+            if (currentChartMode === 'stacked') {
+                mainChartInstance = new Chart(ctx, {
+                    type: 'bar',
+                    data: {
+                        labels: labels,
+                        datasets: [
+                            {
+                                label: '🧱 Roblox 18+ (₽)',
+                                data: ds.roblox_rev || [],
+                                backgroundColor: '#3b82f6',
+                                borderRadius: 4
+                            },
+                            {
+                                label: '🎯 Hunt: Showdown 1896 (₽)',
+                                data: ds.hunt_rev || [],
+                                backgroundColor: '#f43f5e',
+                                borderRadius: 4
+                            },
+                            {
+                                label: '🦀 Rust Twitch Drops (₽)',
+                                data: ds.rust_rev || [],
+                                backgroundColor: '#f59e0b',
+                                borderRadius: 4
+                            }
+                        ]
+                    },
+                    options: {
+                        responsive: true,
+                        maintainAspectRatio: false,
+                        interaction: { mode: 'index', intersect: false },
+                        plugins: {
+                            legend: {
+                                position: 'top',
+                                labels: { color: '#d4d4d8', font: { family: 'Inter', size: 11 }, boxWidth: 10 }
+                            },
+                            tooltip: {
+                                callbacks: {
+                                    footer: (items) => {
+                                        const total = items.reduce((s, i) => s + i.parsed.y, 0);
+                                        return `Итого за день: ${total.toFixed(2)} ₽`;
+                                    }
+                                }
+                            }
+                        },
+                        scales: {
+                            x: { stacked: true, grid: { display: false }, ticks: { color: '#a1a1aa', font: { family: 'JetBrains Mono', size: 11 } } },
+                            y: { stacked: true, grid: { color: 'rgba(255,255,255,0.05)' }, ticks: { color: '#a1a1aa', font: { family: 'JetBrains Mono', size: 11 }, callback: v => `${v} ₽` } }
+                        }
+                    }
+                });
+            } else if (currentChartMode === 'cumulative') {
+                mainChartInstance = new Chart(ctx, {
+                    type: 'line',
+                    data: {
+                        labels: labels,
+                        datasets: [
+                            {
+                                label: 'Накопленная чистая выручка (₽)',
+                                data: ds.cumulative_revenue || [],
+                                borderColor: '#10b981',
+                                backgroundColor: 'rgba(16, 185, 129, 0.12)',
+                                fill: true,
+                                tension: 0.3,
+                                borderWidth: 2.5,
+                                pointRadius: 3
+                            },
+                            {
+                                label: 'Затраты на сырье Twitch (₽)',
+                                data: ds.cumulative_cost || [],
+                                borderColor: '#f59e0b',
+                                borderDash: [5, 5],
+                                backgroundColor: 'transparent',
+                                tension: 0.3,
+                                borderWidth: 2,
+                                pointRadius: 2
+                            }
+                        ]
+                    },
+                    options: {
+                        responsive: true,
+                        maintainAspectRatio: false,
+                        interaction: { mode: 'index', intersect: false },
+                        plugins: {
+                            legend: { labels: { color: '#d4d4d8', font: { family: 'Inter', size: 11 } } }
+                        },
+                        scales: {
+                            x: { grid: { display: false }, ticks: { color: '#a1a1aa', font: { family: 'JetBrains Mono', size: 11 } } },
+                            y: { grid: { color: 'rgba(255,255,255,0.05)' }, ticks: { color: '#a1a1aa', font: { family: 'JetBrains Mono', size: 11 }, callback: v => `${v} ₽` } }
+                        }
+                    }
+                });
+            } else {
+                mainChartInstance = new Chart(ctx, {
+                    type: 'line',
+                    data: {
+                        labels: labels,
+                        datasets: [
+                            {
+                                label: 'Отгружено штук (аккаунтов)',
+                                data: ds.units || [],
+                                borderColor: '#38bdf8',
+                                backgroundColor: 'rgba(56, 189, 248, 0.12)',
+                                fill: true,
+                                tension: 0.3,
+                                borderWidth: 2.5,
+                                pointRadius: 3
+                            },
+                            {
+                                label: 'Выполнено заказов (чеков)',
+                                data: ds.orders || [],
+                                borderColor: '#a855f7',
+                                backgroundColor: 'transparent',
+                                tension: 0.3,
+                                borderWidth: 2,
+                                pointRadius: 3
+                            }
+                        ]
+                    },
+                    options: {
+                        responsive: true,
+                        maintainAspectRatio: false,
+                        interaction: { mode: 'index', intersect: false },
+                        plugins: {
+                            legend: { labels: { color: '#d4d4d8', font: { family: 'Inter', size: 11 } } }
+                        },
+                        scales: {
+                            x: { grid: { display: false }, ticks: { color: '#a1a1aa', font: { family: 'JetBrains Mono', size: 11 } } },
+                            y: { grid: { color: 'rgba(255,255,255,0.05)' }, ticks: { color: '#a1a1aa', font: { family: 'JetBrains Mono', size: 11 } } }
+                        }
+                    }
+                });
+            }
+        }
+
+        function renderDonutChart(d) {
+            const ubg = d.units_by_game || {};
+            const rRev = (ubg['Roblox'] && ubg['Roblox'].gross_revenue) || 0;
+            const rustRev = (ubg['Rust'] && ubg['Rust'].gross_revenue) || 0;
+            const huntRev = (ubg['Hunt: Showdown 1896'] && ubg['Hunt: Showdown 1896'].gross_revenue) || 0;
+            const total = rRev + rustRev + huntRev;
+
+            document.getElementById('donutTotalLabel').textContent = formatRub(total);
+
+            const ctx = document.getElementById('revenueDonutChart');
+            if (ctx) {
+                if (donutChartInstance) donutChartInstance.destroy();
+                donutChartInstance = new Chart(ctx, {
+                    type: 'doughnut',
+                    data: {
+                        labels: ['Roblox 18+', 'Rust Drops', 'Hunt 1896'],
+                        datasets: [{
+                            data: [rRev, rustRev, huntRev],
+                            backgroundColor: ['#3b82f6', '#f59e0b', '#f43f5e'],
+                            borderColor: '#0f0f15',
+                            borderWidth: 3
+                        }]
+                    },
+                    options: {
+                        responsive: true,
+                        maintainAspectRatio: false,
+                        cutout: '70%',
+                        plugins: { legend: { display: false } }
+                    }
+                });
+            }
+
+            const items = [
+                { name: '🧱 Roblox 18+', val: rRev, units: (ubg['Roblox'] && ubg['Roblox'].units_sold) || 0, color: 'bg-blue-500' },
+                { name: '🦀 Rust Drops', val: rustRev, units: (ubg['Rust'] && ubg['Rust'].units_sold) || 0, color: 'bg-amber-500' },
+                { name: '🎯 Hunt 1896', val: huntRev, units: (ubg['Hunt: Showdown 1896'] && ubg['Hunt: Showdown 1896'].units_sold) || 0, color: 'bg-rose-500' }
+            ];
+
+            document.getElementById('donutLegendList').innerHTML = items.map(it => {
+                const pct = total > 0 ? Math.round((it.val / total) * 100) : 0;
+                return `
+                    <div class="flex items-center justify-between">
+                        <div class="flex items-center gap-2">
+                            <span class="w-2.5 h-2.5 rounded-sm ${it.color}"></span>
+                            <span class="text-zinc-200">${it.name}</span>
+                        </div>
+                        <div class="text-right">
+                            <span class="font-bold text-white">${formatRub(it.val)}</span>
+                            <span class="text-muted text-[10px] ml-1">(${pct}% · ${it.units} шт)</span>
+                        </div>
+                    </div>
+                `;
+            }).join('');
+        }
+
+        // ================= SYNC & TIMER =================
+        async function triggerSync() {
+            const btn = document.getElementById('btnSync');
+            const icon = document.getElementById('syncIcon');
+            if (btn) btn.disabled = true;
+            if (icon) icon.classList.add('animate-spin');
+
+            try {
+                await fetch('/api/sync', { method: 'POST' });
+                await fetchAllData();
+                countdownSec = 300;
+                showToast('Данные синхронизированы с FunPay!');
+            } catch (e) {
+                await fetchAllData();
+                showToast('Обновлено');
+            } finally {
+                if (btn) btn.disabled = false;
+                if (icon) icon.classList.remove('animate-spin');
+            }
+        }
+
+        setInterval(() => {
+            if (countdownSec > 0) {
+                countdownSec--;
+                const m = String(Math.floor(countdownSec / 60)).padStart(2, '0');
+                const s = String(countdownSec % 60).padStart(2, '0');
+                const el = document.getElementById('sideTimer');
+                if (el) el.textContent = `${m}:${s}`;
+            } else {
+                countdownSec = 300;
+                fetchAllData();
+            }
+        }, 1000);
+
+        window.addEventListener('DOMContentLoaded', () => {
+            lucide.createIcons();
+            fetchAllData();
+        });
+    </script>
+</body>
+</html>
